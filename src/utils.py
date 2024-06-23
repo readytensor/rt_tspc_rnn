@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, List, Tuple, Union
 
+import torch
+
 
 def read_json_as_dict(input_path: str) -> Dict:
     """
@@ -72,13 +74,15 @@ def read_csv_in_directory(file_dir_path: str) -> pd.DataFrame:
     if not os.path.exists(file_dir_path):
         raise FileNotFoundError(f"Directory does not exist: {file_dir_path}")
 
-    csv_files = [file for file in os.listdir(file_dir_path) if file.endswith(".csv")]
+    csv_files = [file for file in os.listdir(
+        file_dir_path) if file.endswith(".csv")]
 
     if not csv_files:
         raise ValueError(f"No CSV file found in directory {file_dir_path}")
 
     if len(csv_files) > 1:
-        raise ValueError(f"Multiple CSV files found in directory {file_dir_path}.")
+        raise ValueError(
+            f"Multiple CSV files found in directory {file_dir_path}.")
 
     csv_file_path = os.path.join(file_dir_path, csv_files[0])
     df = pd.read_csv(csv_file_path)
@@ -93,7 +97,8 @@ def read_tuning_datasets(tuning_dir_path: str) -> List[pd.DataFrame]:
         if os.path.isdir(os.path.join(tuning_dir_path, i))
     ]
 
-    datasets_paths = [os.path.join(tuning_dir_path, dataset) for dataset in datasets]
+    datasets_paths = [os.path.join(tuning_dir_path, dataset)
+                      for dataset in datasets]
     for path in datasets_paths:
         data = read_csv_in_directory(path)
         results.append(data)
@@ -138,7 +143,8 @@ def set_seeds(seed_value: int) -> None:
         random.seed(seed_value)
         np.random.seed(seed_value)
     else:
-        raise ValueError(f"Invalid seed value: {seed_value}. Cannot set seeds.")
+        raise ValueError(
+            f"Invalid seed value: {seed_value}. Cannot set seeds.")
 
 
 def train_test_split(
@@ -248,6 +254,15 @@ def make_serializable(obj: Any) -> Union[int, float, List[Union[int, float]], An
         return json.JSONEncoder.default(None, obj)
 
 
+def get_peak_memory_usage():
+    """Returns the peak memory usage by current cuda device in (in MB) if available"""
+    if not torch.cuda.is_available():
+        return 0
+    current_device = torch.cuda.current_device()
+    peak_memory = torch.cuda.max_memory_allocated(current_device)
+    return peak_memory / (1024 * 1024)
+
+
 class ResourceTracker(object):
     """
     This class serves as a context manager to track time and
@@ -256,7 +271,8 @@ class ResourceTracker(object):
 
     def __init__(self, logger, monitoring_interval):
         self.logger = logger
-        self.monitor = MemoryMonitor(logger=logger, interval=monitoring_interval)
+        self.monitor = MemoryMonitor(
+            logger=logger, interval=monitoring_interval)
 
     def __enter__(self):
         self.start_time = time.time()
@@ -273,7 +289,7 @@ class ResourceTracker(object):
         elapsed_time = self.end_time - self.start_time
         peak_python_memory_mb = peak / 1024**2
         process_cpu_peak_memory_mb = self.monitor.get_peak_memory_usage()
-        gpu_peak_memory_mb = 0
+        gpu_peak_memory_mb = get_peak_memory_usage()
 
         self.logger.info(f"Execution time: {elapsed_time:.2f} seconds")
         self.logger.info(

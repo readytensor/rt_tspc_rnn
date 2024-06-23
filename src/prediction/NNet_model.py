@@ -24,7 +24,7 @@ class Net(Module):
 
     def __init__(self, feat_dim, encode_len, n_classes, activation, lr):
         """
-        Wrapper class for neural net model.
+        Wrapper class for the neural net model.
 
         Args:
             feat_dim (int): Number of features.

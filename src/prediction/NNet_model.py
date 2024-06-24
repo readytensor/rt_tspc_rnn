@@ -330,6 +330,7 @@ if __name__ == "__main__":
         encode_len=encode_len,
         n_classes=10,
         activation="relu",
+        lr=0.001,
     )
     model.to(device=device)
 

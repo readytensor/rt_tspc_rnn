@@ -1,5 +1,6 @@
 import json
 import os
+import math
 import random
 import time
 import threading
@@ -74,15 +75,17 @@ def read_csv_in_directory(file_dir_path: str) -> pd.DataFrame:
     if not os.path.exists(file_dir_path):
         raise FileNotFoundError(f"Directory does not exist: {file_dir_path}")
 
-    csv_files = [file for file in os.listdir(
-        file_dir_path) if file.endswith(".csv")]
+    csv_files = [
+        file
+        for file in os.listdir(file_dir_path)
+        if file.endswith(".csv") or file.endswith(".zip")
+    ]
 
     if not csv_files:
         raise ValueError(f"No CSV file found in directory {file_dir_path}")
 
     if len(csv_files) > 1:
-        raise ValueError(
-            f"Multiple CSV files found in directory {file_dir_path}.")
+        raise ValueError(f"Multiple CSV files found in directory {file_dir_path}.")
 
     csv_file_path = os.path.join(file_dir_path, csv_files[0])
     df = pd.read_csv(csv_file_path)
@@ -97,8 +100,7 @@ def read_tuning_datasets(tuning_dir_path: str) -> List[pd.DataFrame]:
         if os.path.isdir(os.path.join(tuning_dir_path, i))
     ]
 
-    datasets_paths = [os.path.join(tuning_dir_path, dataset)
-                      for dataset in datasets]
+    datasets_paths = [os.path.join(tuning_dir_path, dataset) for dataset in datasets]
     for path in datasets_paths:
         data = read_csv_in_directory(path)
         results.append(data)
@@ -143,8 +145,7 @@ def set_seeds(seed_value: int) -> None:
         random.seed(seed_value)
         np.random.seed(seed_value)
     else:
-        raise ValueError(
-            f"Invalid seed value: {seed_value}. Cannot set seeds.")
+        raise ValueError(f"Invalid seed value: {seed_value}. Cannot set seeds.")
 
 
 def train_test_split(
@@ -179,18 +180,11 @@ def train_test_split(
         train_set = data.iloc[:-test_size]
 
     else:  # If multiple series, split by series
-        n_test_series = int(n_series * test_split)
+        n_test_series = math.ceil(n_series * test_split)
+        test_ids = random.sample(data[id_col].unique().tolist(), n_test_series)
 
-        smallest_n_series = (
-            data[id_col]
-            .value_counts()
-            .sort_values()
-            .iloc[:n_test_series]
-            .index.tolist()
-        )
-
-        test_set = data[data[id_col].isin(smallest_n_series)]
-        train_set = data[~data[id_col].isin(smallest_n_series)]
+        test_set = data[data[id_col].isin(test_ids)]
+        train_set = data[~data[id_col].isin(test_ids)]
 
     return train_set, test_set
 
@@ -271,8 +265,7 @@ class ResourceTracker(object):
 
     def __init__(self, logger, monitoring_interval):
         self.logger = logger
-        self.monitor = MemoryMonitor(
-            logger=logger, interval=monitoring_interval)
+        self.monitor = MemoryMonitor(logger=logger, interval=monitoring_interval)
 
     def __enter__(self):
         self.start_time = time.time()
